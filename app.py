@@ -1,33 +1,14 @@
 from flask import Flask, render_template, request
+import os
 import nltk
 from joblib import load
 from tokenizer import LemmaTokenizer  # your tokenizer.py
-import os
-import shutil
-from nltk.data import find
-from nltk.tokenize import word_tokenize
-from nltk.stem import WordNetLemmatizer
 
 # ----------------------------
-# Monkey-patch punkt_tab issue
+# Set nltk data path
 # ----------------------------
-try:
-    find('tokenizers/punkt_tab/english.pickle')
-except LookupError:
-    nltk_data_dir = 'nltk_data'  # folder in your project root
-    os.makedirs(os.path.join(nltk_data_dir, 'tokenizers', 'punkt_tab'), exist_ok=True)
-    try:
-        punkt_src = find('tokenizers/punkt/english.pickle')
-        punkt_dst = os.path.join(nltk_data_dir, 'tokenizers', 'punkt_tab', 'english.pickle')
-        shutil.copy(punkt_src, punkt_dst)
-    except LookupError:
-        nltk.download('punkt', download_dir=nltk_data_dir)
-
-# Download wordnet if not present
-try:
-    find('corpora/wordnet')
-except LookupError:
-    nltk.download('wordnet', download_dir='nltk_data')
+nltk_data_path = os.path.join(os.getcwd(), 'nltk_data')
+nltk.data.path.append(nltk_data_path)
 
 # ----------------------------
 # Load models
@@ -56,8 +37,10 @@ def index():
 
     return render_template('index.html')
 
-
+# ----------------------------
+# Run app
+# ----------------------------
 if __name__ == '__main__':
-    nltk.data.path.append(os.path.join(os.getcwd(), 'nltk_data'))
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+    # Use 0.0.0.0 and port 10000 for Render free tier
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host='0.0.0.0', port=port, debug=True)
