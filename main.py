@@ -1,33 +1,48 @@
-from flask import Flask, render_template, request
-import os
-import nltk
+from flask import Flask, request, jsonify
 from joblib import load
-from tokenizer import LemmaTokenizer  # import custom class
+import re
+from nltk.stem import WordNetLemmatizer
 
-# Ensure LemmaTokenizer is visible for unpickling
-globals()['LemmaTokenizer'] = LemmaTokenizer
+# ---- LemmaTokenizer Definition ----
+class LemmaTokenizer(object):
+    def __init__(self):
+        self.wordnetlemma = WordNetLemmatizer()
+    
+    def __call__(self, reviews):
+        tokens = re.findall(r'\b\w+\b', reviews.lower())
+        return [self.wordnetlemma.lemmatize(word) for word in tokens]
 
-# NLTK path
-nltk_data_path = os.path.join(os.getcwd(), 'nltk_data')
-nltk.data.path.append(nltk_data_path)
-
-# Load models
-vectorizer = load('vectorizer.joblib')
-model = load('modelLogReg.joblib')
-
-# Flask app
+# ---- Initialize Flask App ----
 app = Flask(__name__)
 
-@app.route('/', methods=['GET', 'POST'])
-def index():
-    if request.method == 'POST':
-        review = request.form['review']
-        transformed_review = vectorizer.transform([review]).toarray()
-        prediction = model.predict(transformed_review)
-        sentiment = 'Positive' if prediction == '1' else 'Negative'
-        return render_template('index.html', review=review, sentiment=sentiment)
-    return render_template('index.html')
+# ---- Load Vectorizer and Model ----
+# Make sure 'vectorizer.joblib' and 'model.joblib' are in the same folder as main.py
+vectorizer = load('vectorizer.joblib')
+model = load('model.joblib')
 
-if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host='0.0.0.0', port=port, debug=True)
+# ---- Define Routes ----
+@app.route('/')
+def home():
+    return "Flask App is running!"
+
+@app.route('/predict', methods=['POST'])
+def predict():
+    try:
+        data = request.json
+        text = data.get('text', '')
+        
+        # Transform text using the vectorizer
+        features = vectorizer.transform([text])
+        
+        # Make prediction
+        prediction = model.predict(features)[0]
+        
+        return jsonify({'prediction': str(prediction)})
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+
+# ---- Run Flask App ----
+if __name__ == "__main__":
+    # Use debug=True only for local testing
+    app.run(debug=False, host='0.0.0.0', port=5000)
