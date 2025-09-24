@@ -6,6 +6,5 @@ class LemmaTokenizer(object):
         self.wordnetlemma = WordNetLemmatizer()
     
     def __call__(self, reviews):
-        # Simple regex-based tokenization
         tokens = re.findall(r'\b\w+\b', reviews.lower())
         return [self.wordnetlemma.lemmatize(word) for word in tokens]
